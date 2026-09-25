@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production builds
+dist/
+*/dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+*/.env
+serviceAccountKey.json
+
+# Operating System and Logs
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archive and temporary files
+*.zip
+*.tar.gz
+olympus-project.zip
+
+# Server uploads runtime (exclude submitted participant payment screenshots)
+server/uploads/screenshots/*
+!server/uploads/screenshots/.gitkeep

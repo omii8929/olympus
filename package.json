@@ -1,0 +1,15 @@
+{
+  "name": "olympus-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OLYMPUS 2026 - ECE Department Technology & Creativity Platform",
+  "scripts": {
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build:server": "npm run build --prefix server",
+    "build:client": "npm run build --prefix client",
+    "build": "npm run build:server && npm run build:client",
+    "seed": "npm run prisma:seed --prefix server",
+    "db:push": "npm run prisma:push --prefix server"
+  }
+}

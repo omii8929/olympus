@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PARTICIPANT
+}
+
+enum EventType {
+  FULL_STACK_AI
+  DRONE_VIDEO
+  DRONE_POSTER
+}
+
+enum RegStatus {
+  CONFIRMED
+  PENDING
+  CANCELLED
+}
+
+enum PaymentStatus {
+  COMPLETED
+  PENDING
+  VERIFIED
+}
+
+enum Priority {
+  HIGH
+  NORMAL
+  LOW
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String?
+  firebaseUid  String?   @unique
+  name         String
+  role         Role      @default(PARTICIPANT)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Event {
+  id                  String               @id @default(uuid())
+  code                String               @unique // "FULL_STACK_AI" or "DRONE_EVENT"
+  name                String               // "FULL STACK DEVELOPMENT WITH AI" or "ENGINEER'S GOT TALENT"
+  category            String?              // "Full Stack Development with AI" or "Drone Technology"
+  registrationFee     Int                  @default(100)
+  paymentMobile       String               @default("9876543210")
+  upiId               String               @default("olympus.fullstack@upi")
+  qrCodeUrl           String?              @db.Text
+  paymentInstructions String?              @db.Text
+  paymentEnabled      Boolean              @default(true)
+  lastUpdatedBy       String?
+  teams               Team[]
+  registrations       Registration[]
+  auditLogs           EventPaymentAudit[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model EventPaymentAudit {
+  id               String   @id @default(uuid())
+  eventId          String
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  adminId          String?
+  adminFirebaseUid String?
+  adminEmail       String
+  changedField     String
+  previousValue    String?  @db.Text
+  newValue         String?  @db.Text
+  createdAt        DateTime @default(now())
+}
+
+model Team {
+  id           String         @id @default(uuid())
+  teamCode     String         @unique // e.g. TM-9482
+  name         String
+  eventType    EventType
+  eventId      String?
+  event        Event?         @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  participants Participant[]
+  registration Registration?
+  submission   Submission?
+  results      Result[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model Participant {
+  id        String   @id @default(uuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  phone     String
+  branch    String
+  college   String
+  isLeader  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Registration {
+  id                      String        @id @default(uuid())
+  regCode                 String        @unique // e.g. OLY-2026-7842
+  teamId                  String        @unique
+  team                    Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  eventId                 String?
+  event                   Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  status                  RegStatus     @default(CONFIRMED)
+  paymentStatus           PaymentStatus @default(PENDING)
+  amount                  Int           @default(100)
+  registrationFeeAtPayment Int?
+  paymentMobileAtPayment  String?
+  upiIdAtPayment          String?
+  qrCodeAtPayment         String?       @db.Text
+  utrNumber               String?
+  paymentScreenshotUrl    String?       @db.Text
+  notes                   String?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+}
+
+model Announcement {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  priority    Priority @default(NORMAL)
+  category    String   @default("GENERAL") // GENERAL, FULL_STACK, DRONE, SCHEDULE, VENUE
+  active      Boolean  @default(true)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ScheduleItem {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  date        String?  // Configurable string, e.g. "TBA by Organizers" or "Day 1"
+  time        String?  // e.g. "09:00 AM" or "TBA"
+  venue       String?  // e.g. "ECE Seminar Hall / Lab 3" or "TBA"
+  round       String?  // "ROUND 01", "ROUND 02", etc.
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Submission {
+  id           String   @id @default(uuid())
+  teamId       String   @unique
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  projectTitle String
+  repoUrl      String?
+  liveDemoUrl  String?
+  videoUrl     String?
+  fileUrl      String?
+  notes        String?
+  submittedAt  DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Result {
+  id         String    @id @default(uuid())
+  eventType  EventType
+  category   String?   // "Video Making", "Poster Making", "Full Stack"
+  teamId     String
+  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  position   Int       // 1 = 1st, 2 = 2nd, 3 = 3rd
+  prizeTitle String    // e.g. "Winner", "Runner Up", "Honorary Mention"
+  remarks    String?
+  published  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Sponsor {
+  id         String   @id @default(uuid())
+  name       String
+  logoUrl    String?
+  tier       String   @default("PARTNER") // TITLE, POWERED_BY, ASSOCIATE, COMMUNITY
+  websiteUrl String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
