@@ -50,6 +50,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [filterEvent, setFilterEvent] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedTeam, setSelectedTeam] = useState<TeamDetails | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // New Announcement form
   const [newAnnTitle, setNewAnnTitle] = useState('');
@@ -191,6 +192,37 @@ export const AdminDashboardPage: React.FC = () => {
     if (confirm('Delete this published result?')) {
       await api.deleteResult(id);
       loadAllData();
+    }
+  };
+
+  const handleDeleteRegistration = async (team: TeamDetails) => {
+    const regCode = team.registration?.regCode || team.teamCode;
+    const teamName = team.name;
+    const targetId = team.registration?.id || team.id;
+
+    if (
+      !confirm(
+        `Are you sure you want to permanently remove registration ${regCode} for team "${teamName}"?\n\nThis will completely delete the registration, team members, payment proof, and all associated submissions. This action CANNOT be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingId(targetId);
+    try {
+      const res = await api.deleteRegistration(targetId);
+      if (res.success) {
+        if (selectedTeam?.id === team.id) {
+          setSelectedTeam(null);
+        }
+        await loadAllData();
+      } else {
+        alert(res.message || 'Failed to remove registration.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to remove registration.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -487,13 +519,26 @@ export const AdminDashboardPage: React.FC = () => {
                                 )}
                               </div>
                             </td>
-                            <td className="p-3.5 text-right">
-                              <button
-                                onClick={() => setSelectedTeam(t)}
-                                className="px-2.5 py-1 rounded bg-olympus-bg border border-olympus-border hover:border-olympus-cyan text-[11px] text-slate-300 hover:text-white"
-                              >
-                                View Details
-                              </button>
+                            <td className="p-3.5 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedTeam(t)}
+                                  className="px-2.5 py-1 rounded bg-olympus-bg border border-olympus-border hover:border-olympus-cyan text-[11px] text-slate-300 hover:text-white transition-colors"
+                                  title="View Registration Details"
+                                >
+                                  Details
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteRegistration(t)}
+                                  disabled={deletingId === (t.registration?.id || t.id)}
+                                  className="p-1 rounded bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 transition-colors disabled:opacity-50"
+                                  title="Permanently Remove Registration"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1115,7 +1160,18 @@ export const AdminDashboardPage: React.FC = () => {
                 ))}
               </div>
 
-              <div className="pt-4 flex justify-end">
+              <div className="pt-4 flex items-center justify-between border-t border-olympus-border">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteRegistration(selectedTeam)}
+                  disabled={deletingId === (selectedTeam.registration?.id || selectedTeam.id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-xs font-mono font-semibold transition-colors disabled:opacity-50"
+                  title="Permanently Delete Registration"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Remove Registration</span>
+                </button>
+
                 <button
                   onClick={() => setSelectedTeam(null)}
                   className="cyber-button px-5 py-2 bg-olympus-blue text-white text-xs font-tech font-bold uppercase"

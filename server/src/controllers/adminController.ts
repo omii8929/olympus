@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 import { EventType } from '@prisma/client';
+import path from 'path';
+import fs from 'fs';
 
 export const getAdminStats = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -183,3 +185,101 @@ export const exportRegistrationsCSV = async (req: Request, res: Response): Promi
     res.status(500).json({ success: false, message: 'Failed to export CSV.', error });
   }
 };
+
+export const deleteRegistration = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({ success: false, message: 'Registration or Team ID is required.' });
+      return;
+    }
+
+    // 1. Try finding registration by id, regCode, or teamId
+    const registration = await prisma.registration.findFirst({
+      where: {
+        OR: [
+          { id },
+          { regCode: id },
+          { teamId: id },
+        ],
+      },
+      include: {
+        team: true,
+      },
+    });
+
+    if (registration) {
+      // Clean up uploaded screenshot file if it exists locally
+      if (registration.paymentScreenshotUrl && registration.paymentScreenshotUrl.startsWith('/uploads/screenshots/')) {
+        const filePath = path.join(__dirname, '../../', registration.paymentScreenshotUrl);
+        if (fs.existsSync(filePath)) {
+          try {
+            fs.unlinkSync(filePath);
+          } catch (e) {
+            console.warn('Failed to delete screenshot file:', e);
+          }
+        }
+      }
+
+      // Deleting team cascades to participants, submissions, results, and registration
+      if (registration.teamId) {
+        await prisma.team.delete({
+          where: { id: registration.teamId },
+        });
+      } else {
+        await prisma.registration.delete({
+          where: { id: registration.id },
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Registration ${registration.regCode} for team "${registration.team?.name || 'N/A'}" has been permanently removed.`,
+      });
+      return;
+    }
+
+    // 2. If not found via registration, check if it's a team id or teamCode
+    const team = await prisma.team.findFirst({
+      where: {
+        OR: [
+          { id },
+          { teamCode: id },
+        ],
+      },
+      include: {
+        registration: true,
+      },
+    });
+
+    if (team) {
+      if (team.registration?.paymentScreenshotUrl && team.registration.paymentScreenshotUrl.startsWith('/uploads/screenshots/')) {
+        const filePath = path.join(__dirname, '../../', team.registration.paymentScreenshotUrl);
+        if (fs.existsSync(filePath)) {
+          try {
+            fs.unlinkSync(filePath);
+          } catch (e) {
+            console.warn('Failed to delete screenshot file:', e);
+          }
+        }
+      }
+
+      await prisma.team.delete({
+        where: { id: team.id },
+      });
+
+      res.json({
+        success: true,
+        message: `Team "${team.name}" and its registration records have been permanently removed.`,
+      });
+      return;
+    }
+
+    res.status(404).json({ success: false, message: 'Registration record not found.' });
+  } catch (error: any) {
+    console.error('Error deleting registration:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete registration.', error: error.message || error });
+  }
+};
+

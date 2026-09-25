@@ -346,6 +346,18 @@ export const api = {
     return await res.json();
   },
 
+  deleteRegistration: async (id: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/registrations/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || 'Network error while deleting registration.' };
+    }
+  },
+
   getAdminUsers: async () => {
     const res = await fetch(`${API_BASE_URL}/admin/users`, {
       headers: getAuthHeaders(),

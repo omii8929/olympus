@@ -4,6 +4,7 @@ import {
   getAdminRegistrations,
   exportRegistrationsCSV,
   updateRegistrationPaymentStatus,
+  deleteRegistration,
 } from '../controllers/adminController';
 import {
   getAdminEventsPayment,
@@ -29,6 +30,7 @@ router.get('/stats', getAdminStats);
 router.get('/registrations', getAdminRegistrations);
 router.get('/export-csv', exportRegistrationsCSV);
 router.patch('/registrations/:id/payment-status', updateRegistrationPaymentStatus);
+router.delete('/registrations/:id', deleteRegistration);
 
 // Event Payment Settings (SUPER_ADMIN for writes, ADMIN for reads)
 router.get('/events/payment', getAdminEventsPayment);
