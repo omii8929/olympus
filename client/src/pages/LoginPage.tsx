@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Shield, Lock, Mail, AlertCircle, ArrowRight, CheckCircle2, KeyRound } from 'lucide-react';
+import { Shield, Lock, Mail, AlertCircle, ArrowRight, CheckCircle2, KeyRound, Wifi } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { HUDFrame } from '../components/common/HUDFrame';
 import { EVENT_CONFIG } from '../config/eventConfig';
+import { api } from '../services/api';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState<string>('omupotalkar25@coep.sveri.ac.in');
@@ -14,6 +15,13 @@ export const LoginPage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showForgotModal, setShowForgotModal] = useState<boolean>(false);
   const [resetEmail, setResetEmail] = useState<string>('');
+  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+
+  useEffect(() => {
+    api.checkHealth().then((res) => {
+      setApiStatus(res && res.status === 'online' ? 'online' : 'offline');
+    });
+  }, []);
 
   const { login, resetPassword, isFirebaseActive } = useAuth();
   const navigate = useNavigate();
@@ -79,15 +87,21 @@ export const LoginPage: React.FC = () => {
             <h2 className="font-tech text-3xl font-extrabold text-white uppercase tracking-wider">
               ADMIN COMMAND
             </h2>
-            <div className="flex items-center justify-center gap-2 mt-1">
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
               <span className="text-xs font-mono text-purple-300 uppercase font-semibold">
                 ACES // {EVENT_CONFIG.department}
               </span>
-              {isFirebaseActive && (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                  Firebase Auth
-                </span>
-              )}
+              <span
+                className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                  apiStatus === 'online'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : apiStatus === 'offline'
+                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                    : 'bg-slate-500/20 text-slate-400 border-slate-500/40'
+                }`}
+              >
+                {apiStatus === 'online' ? 'API Online' : apiStatus === 'offline' ? 'API Offline' : 'Checking API...'}
+              </span>
             </div>
           </div>
 
@@ -163,6 +177,21 @@ export const LoginPage: React.FC = () => {
               )}
             </button>
           </form>
+
+          {apiStatus === 'offline' && (
+            <div className="mt-5 p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs font-mono space-y-1.5">
+              <div className="font-bold flex items-center gap-1.5 text-amber-300">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Backend API Not Connected</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                If hosted on AWS Amplify, the Express backend API (in <code className="text-cyan-300">/server</code>) must also be hosted on a cloud platform (e.g. Render or Railway) with its URL added in AWS Amplify Environment Variables:
+              </p>
+              <div className="p-2 rounded bg-black/60 border border-slate-700 text-[11px] text-cyan-300 select-all font-mono">
+                VITE_API_URL = https://your-backend.onrender.com/api
+              </div>
+            </div>
+          )}
 
           {/* Password Reset Modal */}
           {showForgotModal && (

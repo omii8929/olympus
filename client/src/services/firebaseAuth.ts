@@ -52,12 +52,23 @@ export async function loginWithFirebase(email: string, password: string): Promis
 
   // Fallback for development/testing when Firebase environment variables are not yet configured
   // Calls the backend /api/auth/login directly
+  const apiBase = import.meta.env.VITE_API_URL || '/api';
   try {
-    const response = await fetch('/api/auth/login', {
+    const response = await fetch(`${apiBase}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: cleanEmail, password }),
     });
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return {
+        success: false,
+        error:
+          'Backend API is not reachable from this domain. If deployed on AWS Amplify, configure VITE_API_URL in AWS Amplify Environment Variables pointing to your live backend server.',
+      };
+    }
+
     const data = await response.json();
     if (data.success && data.token) {
       return {
@@ -69,7 +80,10 @@ export async function loginWithFirebase(email: string, password: string): Promis
     }
     return { success: false, error: data.message || 'Authentication failed.' };
   } catch (netErr: any) {
-    return { success: false, error: 'Network error communicating with authentication service.' };
+    return {
+      success: false,
+      error: `Network error: Cannot reach authentication service (${netErr.message || 'Connection refused'}). Please verify backend API URL.`,
+    };
   }
 }
 
