@@ -83,8 +83,8 @@ The backend Express server is already configured to serve the frontend `client/d
 
 | Role | Email | Password |
 |---|---|---|
-| **Super Admin** | `admin@olympus.ece` | `Admin@123` |
-| **Super Admin** | `omupotalkar25@coep.sveri.ac.in` | `Admin@123` |
-| **Staff Admin** | `staff@olympus.ece` | `Staff@123` |
+| **Super Admin (Primary)** | `omupotalkar25@coep.sveri.ac.in` | `Sveri@123` |
+| **Super Admin (Official)** | `admin@olympus.ece` | `OlympusAdmin@2026` |
+| **Staff Admin (Verifier)** | `staff@olympus.ece` | `OlympusStaff@2026` |
 
-*(Note: Change passwords immediately in production via the Admin Dashboard Management tab).*
+*(Note: Passwords can be changed or new staff accounts created directly via the Admin Dashboard Staff Management tab).*
