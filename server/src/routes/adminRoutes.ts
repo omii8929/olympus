@@ -18,6 +18,7 @@ import {
   updateAdminRole,
   toggleAdminStatus,
   deleteAdminUser,
+  updateAdminCredentials,
 } from '../controllers/eventPaymentController';
 import { authenticateToken, requireAdmin, requireSuperAdmin } from '../middleware/auth';
 
@@ -49,6 +50,7 @@ router.get('/users', requireSuperAdmin, getAdminUsers);
 router.post('/users', requireSuperAdmin, createAdminUser);
 router.patch('/users/:id/role', requireSuperAdmin, updateAdminRole);
 router.patch('/users/:id/status', requireSuperAdmin, toggleAdminStatus);
+router.patch('/users/:id/credentials', requireSuperAdmin, updateAdminCredentials);
 router.delete('/users/:id', requireSuperAdmin, deleteAdminUser);
 
 export default router;

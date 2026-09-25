@@ -398,4 +398,16 @@ export const api = {
     });
     return await res.json();
   },
+
+  updateAdminCredentials: async (
+    userId: string,
+    data: { email?: string; name?: string; password?: string; role?: 'ADMIN' | 'SUPER_ADMIN' }
+  ) => {
+    const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/credentials`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  },
 };

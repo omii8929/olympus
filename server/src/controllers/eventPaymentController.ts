@@ -728,3 +728,92 @@ export const deleteAdminUser = async (req: AuthRequest, res: Response): Promise<
     res.status(500).json({ success: false, message: 'Failed to delete admin user.', error: error.message });
   }
 };
+
+export const updateAdminCredentials = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { email, name, password, role } = req.body;
+
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      res.status(404).json({ success: false, message: 'Admin user not found.' });
+      return;
+    }
+
+    // If email is being changed, verify uniqueness
+    let normalizedEmail: string | undefined = undefined;
+    if (email && email.trim().toLowerCase() !== targetUser.email.toLowerCase()) {
+      normalizedEmail = email.trim().toLowerCase();
+      const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      if (existing) {
+        res.status(400).json({ success: false, message: 'An account with this email address already exists.' });
+        return;
+      }
+    }
+
+    // Build update data
+    const updateData: any = {};
+    if (normalizedEmail) updateData.email = normalizedEmail;
+    if (name && name.trim()) updateData.name = name.trim();
+    if (role && ['ADMIN', 'SUPER_ADMIN'].includes(role)) {
+      // Prevent changing own role
+      if (req.user?.id !== id) {
+        updateData.role = role;
+      }
+    }
+
+    // Hash new password if provided
+    if (password && password.trim()) {
+      if (password.trim().length < 6) {
+        res.status(400).json({ success: false, message: 'Password must be at least 6 characters long.' });
+        return;
+      }
+      const bcrypt = await import('bcryptjs');
+      updateData.passwordHash = await bcrypt.default.hash(password.trim(), 10);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        firebaseUid: true,
+      },
+    });
+
+    // Synchronize changes to Firebase Auth if configured
+    const auth = getFirebaseAuth();
+    if (targetUser.firebaseUid && auth) {
+      try {
+        const fbUpdate: any = {};
+        if (normalizedEmail) fbUpdate.email = normalizedEmail;
+        if (name && name.trim()) fbUpdate.displayName = name.trim();
+        if (password && password.trim()) fbUpdate.password = password.trim();
+
+        if (Object.keys(fbUpdate).length > 0) {
+          await auth.updateUser(targetUser.firebaseUid, fbUpdate);
+        }
+
+        if (updateData.role) {
+          await setUserRoleClaim(targetUser.firebaseUid, updateData.role);
+        }
+      } catch (fbErr: any) {
+        console.warn('Firebase updateUser error during credential update:', fbErr.message);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Credentials for ${updatedUser.name} (${updatedUser.email}) updated successfully.`,
+      data: updatedUser,
+    });
+  } catch (error: any) {
+    console.error('Error updating admin credentials:', error);
+    res.status(500).json({ success: false, message: 'Failed to update admin credentials.', error: error.message || error });
+  }
+};
+
