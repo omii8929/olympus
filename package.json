@@ -10,6 +10,7 @@
     "build:client": "npm run build --prefix client",
     "build": "npm run build:server && npm run build:client",
     "seed": "npm run prisma:seed --prefix server",
-    "db:push": "npm run prisma:push --prefix server"
+    "db:push": "npm run prisma:push --prefix server",
+    "deploy:amplify": "npm run build:client && cd client/dist && zip -q -r ../dist.zip . && cd ../.. && node scripts/deploy-to-amplify.js"
   }
 }
